@@ -6,9 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Sobre este proyecto
 
-`muni-ica-kardex` — aplicación de **kardex / almacén** para la Municipalidad de Ica. Hoy es un scaffold recién generado con `create-next-app` (App Router); la lógica de dominio (SKU, stock, lotes, movimientos de kardex) todavía no está construida.
+`muni-ica-kardex` — aplicación de **kardex / almacén** para la Municipalidad de Ica. El scaffold (`create-next-app`, App Router) ya está en pie; la lógica de dominio se construye spec por spec (ver «Roadmap / especificaciones» abajo). Todavía no hay código de kardex (rutas, tablas, movimientos).
 
-Stack: **Next.js 16.2.10**, **React 19.2.4**, **TypeScript 5** (strict), **Tailwind CSS v4**. Sin capa de datos, tests ni autenticación aún.
+**Alcance del sistema:** tres roles — **superadmin** (cuenta raíz sembrada por seed, **nunca** eliminable ni degradable de rol), **admin** (operaciones del sistema **y** gestión de usuarios: crea, edita y elimina cuentas, salvo al superadmin) y **usuario** (solo lectura de su historial). superadmin y admin comparten todas las capacidades operativas; la única diferencia es que al superadmin **nadie** puede eliminarlo ni cambiarle el rol. Ambos manejan un catálogo de **productos categorizados** (incluidos perecibles con fecha de caducidad), registran **movimientos** de entrada/salida que actualizan el **stock**, entregan salidas a **áreas** destinatarias (ficticias por ahora), generan un **vale de salida en PDF** y ven un **dashboard** (productos más/menos pedidos, próximos a caducar, stock bajo). El superadmin ineliminable existe para que, pase lo que pase con las demás cuentas, siempre quede una cuenta raíz para recuperar el control.
+
+Stack: **Next.js 16.2.10**, **React 19.2.4**, **TypeScript 5** (strict), **Tailwind CSS v4** + shadcn (`base-luma`/`mist`). Capa de datos y auth: **Supabase** (Auth + Postgres + RLS) vía `@supabase/ssr` — paquetes y `.env` ya presentes, wiring pendiente (Spec 01). Roles en tabla `profiles` con columna `role` (`superadmin`/`admin`/`usuario`). Sin framework de tests aún.
+
+### Roadmap / especificaciones
+
+El sistema se construye siguiendo un mapa de **8 specs**. El borrador maestro está en [`spec-draft.md`](spec-draft.md) (raíz): resume dominio, stack, modelo de datos preliminar y una ficha por spec (objetivo, alcance in/out, criterios). Los specs formales se guardan en `specs/NN-slug.md` conforme se van creando.
+
+Flujo por spec: `/spec` (guía la definición, guarda el `.md` en estado `Draft`) → releer y cambiar el estado a `Approved` a mano → `/spec-impl NN-slug` (crea la rama `spec-NN-slug` e implementa paso a paso). Orden recomendado: **01 → 08** según las dependencias del roadmap.
 
 ## Comandos
 
@@ -17,9 +25,16 @@ npm run dev      # servidor de desarrollo (http://localhost:3000)
 npm run build    # build de producción
 npm run start    # sirve el build de producción
 npm run lint     # ESLint (eslint-config-next: core-web-vitals + typescript)
+npm test         # Vitest en modo run (una pasada, para CI)
+npm run test:watch  # Vitest en modo watch (desarrollo)
 ```
 
-No hay framework de tests configurado todavía. Si vas a añadir uno, documéntalo aquí.
+### Tests
+
+- **Unit / componentes: Vitest + React Testing Library.** Config en `vitest.config.mts` (raíz): `@vitejs/plugin-react-swc` para JSX/React 19, `resolve.tsconfigPaths: true` para respetar el alias `@/*`, entorno `jsdom` y `globals: true`. El setup `vitest.setup.ts` carga los matchers de `@testing-library/jest-dom`.
+  - Se usa el plugin **SWC** (no el de Babel) a propósito: `@vitejs/plugin-react@6` exige `@babel/core@8` y choca con el `@babel/core@7` que arrastra `shadcn`; la variante SWC no depende de Babel.
+  - Convención: archivos `*.test.ts` / `*.test.tsx` **junto al código** que prueban (p. ej. `lib/utils.test.ts`, `components/ui/button.test.tsx`). Ejemplos de referencia ya incluidos.
+  - Limitación: Vitest **no** prueba Server Components `async`. Esos flujos (login/auth con cookies, redirects, `proxy.ts`) se cubrirán con **E2E (Playwright)** cuando el auth de Spec 01 esté implementado.
 
 ## ⚠️ Regla obligatoria: consultar context7 ANTES de escribir código
 
