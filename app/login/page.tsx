@@ -8,20 +8,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { createClient } from "@/lib/supabase/server"
+import { resolveLanding } from "@/lib/auth/landing"
+import { getProfile } from "@/lib/auth/profile"
 import logo from "@/app/assets/logo.jpg"
 
 import { LoginForm } from "./login-form"
 
 export default async function LoginPage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const profile = await getProfile()
 
-  // Si ya hay sesión, no tiene sentido mostrar el login: ir al dashboard.
-  if (user) {
-    redirect("/dashboard")
+  // Si ya hay sesión, no tiene sentido mostrar el login: ir al landing del rol.
+  if (profile) {
+    redirect(resolveLanding(profile))
   }
 
   return (

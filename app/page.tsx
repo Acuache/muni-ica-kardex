@@ -1,16 +1,19 @@
 import { redirect } from "next/navigation"
 
-import { createClient } from "@/lib/supabase/server"
+import { resolveLanding } from "@/lib/auth/landing"
+import { getProfile } from "@/lib/auth/profile"
 
 /**
- * Raíz de la app. No hay landing público: redirige a `/dashboard` si hay
- * sesión y a `/login` si no.
+ * Raíz de la app. No hay landing público: sin sesión → `/login`; con sesión,
+ * enruta por rol/perfil con `resolveLanding` (admin/superadmin → /admin,
+ * usuario → /usuario, perfil incompleto → /completar-perfil).
  */
 export default async function Home() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const profile = await getProfile()
 
-  redirect(user ? "/dashboard" : "/login")
+  if (!profile) {
+    redirect("/login")
+  }
+
+  redirect(resolveLanding(profile))
 }

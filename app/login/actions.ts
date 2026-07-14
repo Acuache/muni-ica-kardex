@@ -3,13 +3,16 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 
+import { resolveLanding } from "@/lib/auth/landing"
+import { getProfile } from "@/lib/auth/profile"
 import { createClient } from "@/lib/supabase/server"
 
 export type LoginState = { error: string | null }
 
 /**
  * Server Action de login. Devuelve `{ error }` a la página cuando fallan las
- * credenciales; en éxito refresca el cache y redirige a `/dashboard`.
+ * credenciales; en éxito refresca el cache y redirige al landing del rol
+ * (`/completar-perfil` si el perfil está incompleto).
  * (El `redirect` lanza internamente, por eso va fuera de cualquier try/catch.)
  */
 export async function login(
@@ -31,5 +34,7 @@ export async function login(
   }
 
   revalidatePath("/", "layout")
-  redirect("/dashboard")
+
+  const profile = await getProfile()
+  redirect(profile ? resolveLanding(profile) : "/")
 }
