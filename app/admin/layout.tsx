@@ -32,6 +32,18 @@ export default async function AdminLayout({
           >
             Dashboard
           </Link>
+          <Link
+            href="/admin/categorias"
+            className="rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+          >
+            Categorías
+          </Link>
+          <Link
+            href="/admin/productos"
+            className="rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+          >
+            Productos
+          </Link>
         </nav>
         <form action={logout}>
           <Button type="submit" variant="outline" className="w-full">

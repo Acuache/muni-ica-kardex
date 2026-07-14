@@ -29,7 +29,8 @@ Para no repetir esto en cada spec. Son las decisiones de base; cada spec puede m
   - ⚠️ **Next.js 16:** el antiguo `middleware.ts` se llama ahora **`proxy.ts`** (función `proxy`, runtime nodejs, sin edge). Es donde va el refresco de sesión de Supabase.
 - **Roles:** tabla `profiles` con columna `role` (`'superadmin' | 'admin' | 'usuario'`), poblada por trigger al crear el usuario en `auth.users`. Autorización con RLS (nunca solo en el cliente). Existe **un único** superadmin, sembrado por seed, no editable ni eliminable desde la UI.
 - **Datos ficticios:** vía script `seed` de Supabase (áreas y productos de ejemplo). No hardcodear en el front.
-- **Formularios/validación:** aún no hay librería. Recomendación cuando haga falta: `react-hook-form` + `zod` + `@hookform/resolvers` (se decide en el primer spec con formularios, el 03).
+- **Formularios/validación:** **`react-hook-form` + `zod` + `@hookform/resolvers`** — decidido e introducido en el **Spec 03** (primer spec con formularios); convención para todos los formularios siguientes.
+- **Almacenamiento de archivos — Supabase Storage (desde Spec 03):** las **imágenes de producto** (opcionales) se optimizan en el **cliente** con `browser-image-compression` (WebP, ≤~1024px, ≤~300KB) y se suben a un **bucket público** `productos` (lectura abierta; escritura solo admin por RLS de Storage). Se guarda el `path` del objeto, no la URL.
 - **Tests:** unit / componentes con **Vitest + React Testing Library** (`vitest.config.mts`, plugin SWC, jsdom). Archivos `*.test.ts(x)` junto al código. E2E con **Playwright** a futuro, cuando exista el auth (Spec 01), para flujos con cookies/redirects que Vitest no cubre. Detalle en `CLAUDE.md`.
 - **⚠️ Decisión abierta — PDF (Spec 06):** no hay librería instalada. Recomendación: **`@react-pdf/renderer`** generando el vale en una server action / route handler (control total del layout, render en servidor). Alternativa: `pdf-lib` (más bajo nivel) o HTML→print. Se decide al llegar al Spec 06.
 - **Consulta obligatoria a `context7`** antes de escribir código de cualquier librería (Next tiene breaking changes en esta versión; Supabase cambia seguido).
@@ -42,7 +43,7 @@ Para no repetir esto en cada spec. Son las decisiones de base; cada spec puede m
 |---------|--------|
 | `profiles` | Perfil de cada usuario de `auth.users`: nombre, rol (`superadmin`/`admin`/`usuario`), área a la que pertenece. |
 | `categorias` | Agrupación de productos (ej. "Hojas bond", "Perecibles", "Útiles de oficina"). |
-| `productos` | Ítem de almacén con SKU, unidad, stock actual, y —si es perecible— fecha de caducidad. |
+| `productos` | Ítem de almacén con SKU, stock actual, y —si es perecible— fecha de caducidad. |
 | `areas` | Área/oficina destinataria de las salidas (ficticias por ahora). |
 | `movimientos` | Registro de una entrada o salida: producto, cantidad, área destino, usuario, fecha, motivo. Es el kardex. |
 
@@ -70,11 +71,11 @@ id             uuid PK
 sku            text unique
 nombre         text
 categoria_id   uuid references categorias(id)
-unidad         text                 -- "unidad", "caja", "millar", ...
 stock_actual   int  default 0       -- lo mueve Spec 05, no se edita a mano
 stock_minimo   int  default 0       -- umbral para alerta de stock bajo (dashboard)
 es_perecible   boolean default false
-fecha_caducidad date null           -- solo si es_perecible
+fecha_caducidad date null           -- opcional; solo se permite si es_perecible
+imagen_path    text null            -- ruta en bucket público de Storage (Spec 03); null si no tiene imagen
 
 -- areas  (Spec 04)
 id           uuid PK
@@ -179,7 +180,7 @@ Cada ficha trae lo mínimo para arrancar `/spec` sin ambigüedad. Los criterios 
 ### Spec 03 — Catálogo: categorías y productos
 - **Objetivo:** Gestionar (CRUD) categorías y productos, incluyendo perecibles con fecha de caducidad.
 - **Depende de:** 02
-- **In:** tablas `categorias` y `productos` + RLS (admin escribe); páginas admin de listado/alta/edición/baja de categorías y productos; campos de perecible (`es_perecible`, `fecha_caducidad`); seed de categorías y productos ficticios; primera integración de formularios (`react-hook-form` + `zod`).
+- **In:** tablas `categorias` y `productos` + RLS (admin escribe); páginas admin de listado/alta/edición/baja de categorías y productos; campos de perecible (`es_perecible`, `fecha_caducidad` **opcional**); **imagen de producto opcional** optimizada en el navegador (WebP) y subida a un bucket público de Supabase Storage; seed de categorías y productos ficticios; primera integración de formularios (`react-hook-form` + `zod`).
 - **Out:** mover stock (lo hace 05; aquí `stock_actual` arranca en un valor inicial, no se opera); lotes múltiples por producto (a futuro).
 - **Datos clave:** `categorias`, `productos` (ver §4).
 - **Criterios (tentativos):**
@@ -187,7 +188,7 @@ Cada ficha trae lo mínimo para arrancar `/spec` sin ambigüedad. Los criterios 
   - [ ] El admin crea un producto con SKU único y lo asigna a una categoría.
   - [ ] Marcar un producto como perecible obliga a capturar `fecha_caducidad`.
   - [ ] El seed carga al menos N categorías y N productos ficticios.
-- **Decisiones abiertas:** ¿SKU manual o autogenerado?; ¿un producto perecible maneja **una** fecha o **lotes** con fechas distintas? (recomendado: una fecha por ahora, lotes a futuro).
+- **Decisiones cerradas (ver spec formal `specs/03-catalogo-categorias-productos.md`):** SKU **manual o autogenerado** (del nombre), único y en mayúsculas; **stock inicial capturado al crear** + `stock_minimo` en el form; categoría **obligatoria**; borrado **físico** pero sin poder eliminar categorías con productos; perecible con **una** fecha **opcional**; **imagen opcional** optimizada en cliente + Storage público. **Ajustes posteriores a la aprobación:** se **eliminó** el campo `unidad`; la lista de productos tiene **filtro/orden en cliente**; el nombre se guarda **capitalizado**. Lotes múltiples: a futuro.
 
 ### Spec 04 — Áreas y gestión de usuarios
 - **Objetivo:** Permitir gestionar áreas destinatarias y que admin y superadmin creen, editen y eliminen cuentas (salvo al superadmin).
@@ -280,7 +281,7 @@ Flujo por spec:
 
 `/spec` las preguntará en varias fichas; ten la respuesta lista:
 
-- **Unidades de medida:** ¿lista cerrada (unidad, caja, millar, paquete…) o texto libre? (recomendado: lista cerrada).
+- **Unidades de medida:** el campo `unidad` se **eliminó** del producto (ajuste posterior al Spec 03); el catálogo ya no maneja unidad de medida.
 - **Borrado:** ¿baja física o lógica (soft-delete) en productos/áreas? Ojo: no se puede borrar un producto con movimientos.
 - **Stock inicial:** ¿se captura al crear el producto (Spec 03) o siempre entra por una "entrada" (Spec 05)? (recomendado: por entrada, para que todo quede en el kardex).
 - **Zona horaria / formato de fecha:** Perú (America/Lima); fechas en formato local.
