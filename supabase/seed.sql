@@ -69,3 +69,21 @@ values
   ('PE-AZUC',   'Azúcar rubia 1kg',        (select id from public.categorias where nombre = 'Perecibles'),          35, 10, true,  '2027-03-01'),
   ('EQ-USB',    'Memoria USB 32GB',        (select id from public.categorias where nombre = 'Equipos de cómputo'),  25,  5, false, null)
 on conflict (sku) do nothing;
+
+
+-- ===========================================================================
+-- SPEC 04 · Paso 2 — Seed de áreas ficticias.
+--
+-- Áreas destinatarias de las salidas de almacén. Datos de ejemplo para asignar
+-- a los usuarios y alimentar el historial por área (Spec 08). Idempotente:
+-- `nombre` es único → `on conflict do nothing`.
+-- ===========================================================================
+
+insert into public.areas (nombre) values
+  ('Logística'),
+  ('Contabilidad'),
+  ('Recursos Humanos'),
+  ('Mesa de Partes'),
+  ('Gerencia'),
+  ('Tesorería')
+on conflict (nombre) do nothing;
