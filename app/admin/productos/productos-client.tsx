@@ -432,6 +432,10 @@ export function ProductosClient({
                         render={
                           <Link href={`/admin/movimientos?producto=${p.id}`} />
                         }
+                        // Base UI asume un <button> nativo salvo que se le diga
+                        // lo contrario; aquí el elemento real es el <a> de
+                        // <Link>, que ya trae su propia semántica accesible.
+                        nativeButton={false}
                       >
                         <RiHistoryLine />
                       </Button>

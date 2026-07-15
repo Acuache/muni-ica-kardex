@@ -1,9 +1,9 @@
 import type { ReactNode } from "react"
-import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
 import { requireRole } from "@/lib/auth/require-role"
 
+import { AdminNav } from "./admin-nav"
 import { logout } from "./dashboard/actions"
 
 /**
@@ -11,8 +11,8 @@ import { logout } from "./dashboard/actions"
  * El guard corre en servidor en cada request: sin sesión → /login, perfil
  * incompleto → /completar-perfil, rol equivocado → su propio landing.
  *
- * El sidebar muestra solo "Dashboard"; cada módulo agrega su enlace en su
- * propio spec (sin rutas muertas).
+ * Los enlaces viven en `AdminNav` (Client Component) porque marcar la ruta
+ * activa necesita `usePathname`.
  */
 export default async function AdminLayout({
   children,
@@ -25,44 +25,7 @@ export default async function AdminLayout({
     <div className="flex min-h-dvh">
       <aside className="flex w-56 flex-col border-r bg-muted/40 p-4">
         <div className="mb-6 px-2 text-sm font-semibold">Kardex · Ica</div>
-        <nav className="flex flex-1 flex-col gap-1">
-          <Link
-            href="/admin/dashboard"
-            className="rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/admin/categorias"
-            className="rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-          >
-            Categorías
-          </Link>
-          <Link
-            href="/admin/productos"
-            className="rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-          >
-            Productos
-          </Link>
-          <Link
-            href="/admin/movimientos"
-            className="rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-          >
-            Movimientos
-          </Link>
-          <Link
-            href="/admin/areas"
-            className="rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-          >
-            Áreas
-          </Link>
-          <Link
-            href="/admin/usuarios"
-            className="rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-          >
-            Usuarios
-          </Link>
-        </nav>
+        <AdminNav />
         <form action={logout}>
           <Button type="submit" variant="outline" className="w-full">
             Cerrar sesión
