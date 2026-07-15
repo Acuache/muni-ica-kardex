@@ -87,3 +87,74 @@ insert into public.areas (nombre) values
   ('Gerencia'),
   ('Tesorería')
 on conflict (nombre) do nothing;
+
+
+-- ===========================================================================
+-- SPEC 05 · Paso 8 — Seed de movimientos de kardex.
+--
+-- ~13 movimientos ficticios (entradas y salidas) sobre productos y áreas ya
+-- sembrados. Se insertan DIRECTAMENTE (no vía la RPC registrar_movimiento):
+-- el seed corre como superusuario sin sesión, así que auth.uid() es null y la
+-- RPC fallaría por is_admin(). El usuario_id se fija al superadmin del seed.
+--
+-- Idempotente: todo el bloque se salta si ya hay movimientos. Al final, el
+-- `stock_actual` de CADA producto afectado se CUADRA al neto de sus movimientos
+-- (entradas − salidas), como exige el criterio de aceptación. Los productos NO
+-- afectados conservan su stock inicial (decisión 3.a: el stock previo se respeta
+-- tal cual; solo lo mueven los movimientos de aquí en adelante).
+-- ===========================================================================
+
+do $$
+declare
+  v_super uuid := (select id from auth.users where email = 'v.acuache15@gmail.com');
+begin
+  -- Idempotencia: si ya existe historial, no re-sembrar.
+  if exists (select 1 from public.movimientos) then
+    return;
+  end if;
+
+  -- Inserta los movimientos resolviendo producto por SKU y área por nombre.
+  -- Las entradas van sin área (area_nombre null → area_id null, exigido por el
+  -- check movimientos_entrada_area); las salidas siempre llevan área.
+  insert into public.movimientos (tipo, producto_id, cantidad, area_id, usuario_id, motivo, fecha)
+  select v.tipo,
+         p.id,
+         v.cantidad,
+         a.id,
+         v_super,
+         v.motivo,
+         now() - make_interval(days => v.dias)
+    from (values
+      -- Lapicero azul (net +100)
+      ('entrada', 'OF-LAP-AZ', 150, null,               'Compra a proveedor',       30),
+      ('salida',  'OF-LAP-AZ',  30, 'Logística',         'Entrega mensual',          20),
+      ('salida',  'OF-LAP-AZ',  20, 'Contabilidad',      'Reposición de escritorio', 10),
+      -- Hojas bond A4 (net +120)
+      ('entrada', 'PA-HB-A4',  200, null,                'Compra a proveedor',       28),
+      ('salida',  'PA-HB-A4',   50, 'Mesa de Partes',    'Atención al público',      15),
+      ('salida',  'PA-HB-A4',   30, 'Gerencia',          'Documentación interna',     5),
+      -- Detergente multiusos (net +50)
+      ('entrada', 'LI-DET',     60, null,                'Compra a proveedor',       25),
+      ('salida',  'LI-DET',     10, 'Recursos Humanos',  'Limpieza de oficina',       8),
+      -- Alcohol gel (net +50)
+      ('entrada', 'PE-ALC',     80, null,                'Compra a proveedor',       22),
+      ('salida',  'PE-ALC',     20, 'Tesorería',         'Dispensadores',            12),
+      ('salida',  'PE-ALC',     10, 'Logística',         'Dispensadores',             4),
+      -- Memoria USB (net +25)
+      ('entrada', 'EQ-USB',     30, null,                'Compra a proveedor',       18),
+      ('salida',  'EQ-USB',      5, 'Contabilidad',      'Respaldo de información',    3)
+    ) as v(tipo, sku, cantidad, area_nombre, motivo, dias)
+    join public.productos p on p.sku = v.sku
+    left join public.areas a on a.nombre = v.area_nombre;
+
+  -- Cuadra el stock de los productos afectados al neto de sus movimientos.
+  update public.productos p
+     set stock_actual = sub.net
+    from (
+      select producto_id,
+             sum(case when tipo = 'entrada' then cantidad else -cantidad end) as net
+        from public.movimientos
+       group by producto_id
+    ) sub
+   where p.id = sub.producto_id;
+end $$;

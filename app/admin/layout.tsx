@@ -45,6 +45,12 @@ export default async function AdminLayout({
             Productos
           </Link>
           <Link
+            href="/admin/movimientos"
+            className="rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+          >
+            Movimientos
+          </Link>
+          <Link
             href="/admin/areas"
             className="rounded-md px-2 py-1.5 text-sm hover:bg-muted"
           >

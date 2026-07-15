@@ -17,6 +17,8 @@ export default async function ProductosPage() {
       .select(
         "id, sku, nombre, categoria_id, stock_actual, stock_minimo, es_perecible, fecha_caducidad, imagen_path, created_at",
       )
+      // Soft-delete (Spec 05): el catálogo solo muestra productos vigentes.
+      .eq("eliminado", false)
       .order("nombre"),
     supabase
       .from("categorias")

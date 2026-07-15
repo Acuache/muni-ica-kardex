@@ -1,12 +1,14 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   RiAddLine,
   RiDeleteBinLine,
+  RiHistoryLine,
   RiImageLine,
   RiPencilLine,
 } from "@remixicon/react"
@@ -425,6 +427,17 @@ export function ProductosClient({
                       <Button
                         variant="ghost"
                         size="icon-sm"
+                        aria-label={`Ver kardex de ${p.nombre}`}
+                        title="Ver kardex"
+                        render={
+                          <Link href={`/admin/movimientos?producto=${p.id}`} />
+                        }
+                      >
+                        <RiHistoryLine />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
                         aria-label={`Editar ${p.nombre}`}
                         onClick={() => openEdit(p)}
                       >
@@ -673,8 +686,8 @@ export function ProductosClient({
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar producto</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Eliminar «{deleteTarget?.nombre}»? Esta acción no se puede
-              deshacer y también borra su imagen.
+              ¿Eliminar «{deleteTarget?.nombre}»? Sale del catálogo, pero su
+              historial de movimientos (kardex) se conserva.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -113,18 +113,15 @@ export async function eliminarProducto(id: string): Promise<ActionResult> {
 
   const supabase = await createClient()
 
-  const { data: actual } = await supabase
+  // Soft-delete (Spec 05): el borrado es LÓGICO. La fila persiste (los
+  // movimientos siguen apuntando a un producto real y el kardex no queda con
+  // huecos) y la imagen NO se toca. El producto sale del catálogo por el filtro
+  // `eliminado = false` de las lecturas.
+  const { error } = await supabase
     .from("productos")
-    .select("imagen_path")
+    .update({ eliminado: true })
     .eq("id", id)
-    .single()
-
-  const { error } = await supabase.from("productos").delete().eq("id", id)
   if (error) return { ok: false, error: "No se pudo eliminar el producto." }
-
-  // Borra la imagen asociada, si tenía.
-  if (actual?.imagen_path)
-    await supabase.storage.from(BUCKET).remove([actual.imagen_path])
 
   revalidatePath(RUTA)
   return { ok: true }
