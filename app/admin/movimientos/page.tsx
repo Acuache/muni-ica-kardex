@@ -17,6 +17,7 @@ type ProductoRow = {
 
 type MovimientoRow = {
   id: string
+  folio: number
   tipo: "entrada" | "salida"
   producto_id: string
   cantidad: number
@@ -46,7 +47,7 @@ export default async function MovimientosPage({
   let movQuery = supabase
     .from("movimientos")
     .select(
-      "id, tipo, producto_id, cantidad, area_id, usuario_id, motivo, fecha",
+      "id, folio, tipo, producto_id, cantidad, area_id, usuario_id, motivo, fecha",
     )
     .order("fecha", { ascending: false })
   if (productoParam) movQuery = movQuery.eq("producto_id", productoParam)
@@ -90,6 +91,7 @@ export default async function MovimientosPage({
     const prod = prodPorId.get(m.producto_id)
     return {
       id: m.id,
+      folio: m.folio,
       tipo: m.tipo,
       producto_id: m.producto_id,
       producto_nombre: prod?.nombre ?? null,

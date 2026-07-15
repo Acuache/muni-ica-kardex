@@ -10,6 +10,7 @@ import {
   RiArrowLeftLine,
   RiArrowDownLine,
   RiArrowUpLine,
+  RiFileDownloadLine,
 } from "@remixicon/react"
 import { Controller, useForm, useWatch, type Resolver } from "react-hook-form"
 
@@ -47,6 +48,7 @@ import type {
   Movimiento,
   ProductoOpcion,
 } from "@/lib/movimientos/types"
+import { padFolio } from "@/lib/movimientos/vale"
 
 import { registrar } from "./actions"
 
@@ -309,6 +311,7 @@ export function MovimientosClient({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Folio</TableHead>
               <TableHead>Fecha</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Producto</TableHead>
@@ -316,13 +319,14 @@ export function MovimientosClient({
               <TableHead>Área</TableHead>
               <TableHead>Usuario</TableHead>
               <TableHead>Motivo</TableHead>
+              <TableHead className="w-24 text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {visibles.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={9}
                   className="py-8 text-center text-muted-foreground"
                 >
                   {movimientos.length === 0
@@ -333,6 +337,9 @@ export function MovimientosClient({
             ) : (
               visibles.map((m) => (
                 <TableRow key={m.id}>
+                  <TableCell className="whitespace-nowrap font-medium tabular-nums">
+                    {padFolio(m.folio)}
+                  </TableCell>
                   <TableCell className="whitespace-nowrap text-muted-foreground tabular-nums">
                     {fmtFecha(m.fecha)}
                   </TableCell>
@@ -371,6 +378,28 @@ export function MovimientosClient({
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {m.motivo ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {/* Solo las salidas se entregan y se firman: una entrada no
+                        tiene vale, y su ruta responde 404. */}
+                    {m.tipo === "salida" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title={`Descargar vale ${padFolio(m.folio)}`}
+                        aria-label={`Descargar vale ${padFolio(m.folio)} de ${m.producto_nombre ?? "producto"}`}
+                        // <a> nativo, no <Link>: esto es una descarga binaria,
+                        // no una navegación de cliente. El Content-Disposition
+                        // del handler baja el archivo y deja la página intacta.
+                        render={<a href={`/admin/movimientos/${m.id}/vale`} />}
+                        // Base UI asume un <button> nativo salvo que se le diga
+                        // lo contrario; aquí el elemento real es un <a>, y un
+                        // enlace ya trae su propia semántica accesible.
+                        nativeButton={false}
+                      >
+                        <RiFileDownloadLine /> Vale
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
