@@ -14,14 +14,45 @@ import type { DatosVale } from "@/lib/movimientos/types"
 import { ValePDF } from "./vale-pdf"
 
 const DATOS: DatosVale = {
-  folioTexto: "VALE N° 000042",
+  loteTexto: "L-000042",
   fecha: "14 de junio de 2026, 12:52",
-  producto: "Papel bond A4",
-  sku: "PAP-001",
-  cantidad: 3,
   area: "Logística",
   entregadoPor: "Ana Ñuñez",
   motivo: "Entrega a Logística",
+  grupos: [
+    {
+      categoria: "Oficina",
+      items: [
+        { folioTexto: "000042", producto: "Papel bond A4", sku: "PAP-001", cantidad: 3 },
+      ],
+    },
+  ],
+}
+
+/** Vale consolidado: dos categorías, tres productos (Spec 06.1). */
+const DATOS_MULTI: DatosVale = {
+  loteTexto: "L-000042",
+  fecha: "14 de junio de 2026, 12:52",
+  area: "Logística",
+  entregadoPor: "Ana Ñuñez",
+  motivo: null,
+  // Ya vienen ordenados por categoría (como los deja construirDatosVale):
+  // Limpieza antes que Oficina. El componente pinta en el orden recibido.
+  grupos: [
+    {
+      categoria: "Limpieza",
+      items: [
+        { folioTexto: "000043", producto: "Detergente", sku: "LI-DET", cantidad: 2 },
+        { folioTexto: "000044", producto: "Lejía", sku: "LI-LEJ", cantidad: 5 },
+      ],
+    },
+    {
+      categoria: "Oficina",
+      items: [
+        { folioTexto: "000042", producto: "Papel bond A4", sku: "PAP-001", cantidad: 3 },
+      ],
+    },
+  ],
 }
 
 /** Un fragmento de texto con su posición absoluta en la página. */
@@ -149,15 +180,29 @@ describe("ValePDF", () => {
     expect(texto).toContain("Vale de salida de almacén")
   })
 
-  it("imprime folio, fecha, producto, SKU, cantidad y área destino", async () => {
+  it("identifica el vale por el código de lote e imprime fecha, producto, SKU, cantidad y área", async () => {
     const { texto } = await render(DATOS)
-    expect(texto).toContain("VALE N° 000042")
+    // El documento se identifica por el código de lote, no por «VALE N°».
+    // (La etiqueta «Lote » y el código van en runs distintos del PDF.)
+    expect(texto).toContain("L-000042")
+    expect(texto).not.toContain("VALE N°")
     expect(texto).toContain("14 de junio de 2026, 12:52")
     expect(texto).toContain("Papel bond A4")
     expect(texto).toContain("PAP-001")
-    expect(texto).toContain("Cantidad")
+    // La cantidad va en la columna del detalle (cabecera "CANT.").
+    expect(texto).toContain("CANT.")
     expect(texto).toContain("Área destino")
     expect(texto).toContain("Logística")
+  })
+
+  it("agrupa el detalle en una sección por categoría (Spec 06.1)", async () => {
+    const { texto } = await render(DATOS_MULTI)
+    // Dos subtítulos de categoría y los tres productos.
+    expect(texto).toContain("Limpieza")
+    expect(texto).toContain("Oficina")
+    expect(texto).toContain("Detergente")
+    expect(texto).toContain("Lejía")
+    expect(texto).toContain("Papel bond A4")
   })
 
   it("lleva los dos recuadros de firma con nombre y DNI", async () => {
@@ -186,11 +231,19 @@ describe("ValePDF", () => {
   it("imprime los acentos y la ñ, no cuadros ni signos de interrogación", async () => {
     const { texto } = await render({
       ...DATOS,
-      producto: "Cañería de ½ pulgada",
       area: "Gestión Tributaria",
       entregadoPor: "Íñigo Peña",
+      grupos: [
+        {
+          categoria: "Ferretería",
+          items: [
+            { folioTexto: "000042", producto: "Cañería de ½ pulgada", sku: "FE-CAN", cantidad: 1 },
+          ],
+        },
+      ],
     })
     expect(texto).toContain("Cañería")
+    expect(texto).toContain("Ferretería")
     expect(texto).toContain("Gestión Tributaria")
     expect(texto).toContain("Íñigo Peña")
   })
@@ -221,9 +274,14 @@ describe("ValePDF · maquetación", () => {
     // una sola cadena emborronada (`flex: 1` en el `Text`, no en la columna).
     const { buscar } = await render({
       ...DATOS,
-      producto: "San Luis Gonzaga",
-      sku: "SAN-LUI-GON",
-      motivo: null,
+      grupos: [
+        {
+          categoria: "Oficina",
+          items: [
+            { folioTexto: "000042", producto: "San Luis Gonzaga", sku: "SAN-LUI-GON", cantidad: 1 },
+          ],
+        },
+      ],
     })
 
     const nombre = buscar("San Luis Gonzaga")
@@ -235,41 +293,47 @@ describe("ValePDF · maquetación", () => {
     expect(nombre!.y - sku!.y).toBeGreaterThan(6)
   })
 
-  it("pone cada etiqueta del bloque en su propia línea, de arriba a abajo", async () => {
+  it("pone el subtítulo de la categoría por encima de sus productos", async () => {
     const { buscar } = await render(DATOS)
 
-    const producto = buscar("Producto")!.y
-    const cantidad = buscar("Cantidad")!.y
-    const area = buscar("Área destino")!.y
-    const motivo = buscar("Motivo")!.y
+    const categoria = buscar("Oficina")!.y
+    const producto = buscar("Papel bond A4")!.y
 
-    expect(producto).toBeGreaterThan(cantidad)
-    expect(cantidad).toBeGreaterThan(area)
-    expect(area).toBeGreaterThan(motivo)
+    // La categoría encabeza la sección: va arriba (en PDF, y mayor = más arriba).
+    expect(categoria).toBeGreaterThan(producto)
   })
 
-  it("separa el valor de su etiqueta en horizontal, sin encimarlos", async () => {
+  it("pone cada sección de categoría en orden, de arriba a abajo", async () => {
+    const { buscar } = await render(DATOS_MULTI)
+
+    // Se pintan en el orden del arreglo: Limpieza arriba, Oficina debajo.
+    const limpieza = buscar("Limpieza")!.y
+    const oficina = buscar("Oficina")!.y
+    expect(limpieza).toBeGreaterThan(oficina)
+  })
+
+  it("alinea folio, producto y cantidad de un item en la misma fila", async () => {
     const { buscar } = await render(DATOS)
 
-    const etiqueta = buscar("Cantidad")!
-    const valor = buscar("3")!
+    const producto = buscar("Papel bond A4")!
+    const cantidad = buscar("3")!
 
-    expect(valor.x).toBeGreaterThan(etiqueta.x)
-    // Y en la misma línea: es una fila, no dos.
-    expect(Math.abs(valor.y - etiqueta.y)).toBeLessThan(3)
+    // La cantidad va a la derecha del producto y en la misma línea.
+    expect(cantidad.x).toBeGreaterThan(producto.x)
+    expect(Math.abs(cantidad.y - producto.y)).toBeLessThan(3)
   })
 
-  it("deja los dos recuadros de firma lado a lado y bajo el bloque de datos", async () => {
+  it("deja los dos recuadros de firma lado a lado y bajo el detalle", async () => {
     const { buscar } = await render(DATOS)
 
     const entrega = buscar("Entregado por")!
     const recibe = buscar("Recibido por")!
-    const area = buscar("Área destino")!
+    const producto = buscar("Papel bond A4")!
 
     // Misma altura, uno a cada lado.
     expect(Math.abs(entrega.y - recibe.y)).toBeLessThan(3)
     expect(recibe.x).toBeGreaterThan(entrega.x)
-    // Y por debajo del bloque de datos (en PDF, y menor = más abajo).
-    expect(entrega.y).toBeLessThan(area.y)
+    // Y por debajo del detalle de productos (en PDF, y menor = más abajo).
+    expect(entrega.y).toBeLessThan(producto.y)
   })
 })

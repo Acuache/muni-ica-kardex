@@ -20,13 +20,19 @@ const SALIDA = {
   cantidad: 3,
   motivo: "Entrega a Logística",
   usuario_id: "u-1",
+  lote_id: "lote-1",
+  lotes: { numero: 42 },
   productos: { nombre: "Papel bond A4", sku: "PAP-001" },
   areas: { nombre: "Logística" },
 }
 
 const PERFIL_AUTOR = { nombre: "Ana Ñuñez", email: "ana@muni-ica.gob.pe" }
 
-/** Supabase mínimo: solo la cadena que usa el handler. */
+/**
+ * Supabase mínimo: solo la cadena que usa el handler. Todo movimiento tiene lote
+ * (Spec 06.1), así que la consulta del lote (`.eq().order()`) devuelve el propio
+ * movimiento como lote de uno.
+ */
 function mockSupabase(mov: unknown, autor: unknown = PERFIL_AUTOR) {
   vi.mocked(createClient).mockResolvedValue({
     from: (tabla: string) => ({
@@ -34,6 +40,10 @@ function mockSupabase(mov: unknown, autor: unknown = PERFIL_AUTOR) {
         eq: () => ({
           maybeSingle: async () => ({
             data: tabla === "movimientos" ? mov : autor,
+            error: null,
+          }),
+          order: async () => ({
+            data: tabla === "movimientos" ? [mov] : null,
             error: null,
           }),
         }),
@@ -130,7 +140,7 @@ describe("GET /admin/movimientos/[id]/vale — la descarga", () => {
     expect(res.status).toBe(200)
     expect(res.headers.get("Content-Type")).toBe("application/pdf")
     expect(res.headers.get("Content-Disposition")).toBe(
-      'attachment; filename="vale-000042.pdf"',
+      'attachment; filename="vale-L-000042.pdf"',
     )
     expect(buffer.subarray(0, 5).toString("latin1")).toBe("%PDF-")
   })
@@ -160,5 +170,97 @@ describe("GET /admin/movimientos/[id]/vale — la descarga", () => {
     const b = Buffer.from(await (await GET(new Request("http://x"), ctx())).arrayBuffer())
 
     expect(a.length).toBe(b.length)
+  })
+})
+
+describe("GET /admin/movimientos/[id]/vale — vale consolidado por lote (Spec 06.1)", () => {
+  beforeEach(() => {
+    vi.mocked(getProfile).mockResolvedValue(perfil("admin"))
+  })
+
+  // Fila del movimiento consultado por id: pertenece a un lote y NO es la de
+  // folio más bajo (folio 44), para probar que el nombre del archivo usa el
+  // mínimo del lote y no el de la fila consultada.
+  const CABECERA_LOTE = {
+    folio: 44,
+    tipo: "salida",
+    fecha: "2026-06-14T17:52:04.025Z",
+    cantidad: 5,
+    motivo: "Entrega mixta",
+    usuario_id: "u-1",
+    lote_id: "lote-1",
+    lotes: { numero: 42 },
+    productos: { nombre: "Lejía", sku: "LI-LEJ", categorias: { nombre: "Limpieza" } },
+    areas: { nombre: "Logística" },
+  }
+
+  // Las tres filas del lote, dos categorías. El folio mínimo es 42.
+  const FILAS_LOTE = [
+    {
+      folio: 42,
+      fecha: "2026-06-14T17:52:04.025Z",
+      cantidad: 3,
+      motivo: "Entrega mixta",
+      productos: { nombre: "Papel bond A4", sku: "PAP-001", categorias: { nombre: "Oficina" } },
+      areas: { nombre: "Logística" },
+    },
+    {
+      folio: 43,
+      fecha: "2026-06-14T17:52:04.025Z",
+      cantidad: 2,
+      motivo: "Entrega mixta",
+      productos: { nombre: "Detergente", sku: "LI-DET", categorias: { nombre: "Limpieza" } },
+      areas: { nombre: "Logística" },
+    },
+    {
+      folio: 44,
+      fecha: "2026-06-14T17:52:04.025Z",
+      cantidad: 5,
+      motivo: "Entrega mixta",
+      productos: { nombre: "Lejía", sku: "LI-LEJ", categorias: { nombre: "Limpieza" } },
+      areas: { nombre: "Logística" },
+    },
+  ]
+
+  /** Mock que soporta la cadena del lote (`.eq().order()`) además de `.maybeSingle()`. */
+  function mockSupabaseLote(
+    cabecera: unknown,
+    filasLote: unknown,
+    autor: unknown = PERFIL_AUTOR,
+  ) {
+    vi.mocked(createClient).mockResolvedValue({
+      from: (tabla: string) => ({
+        select: () => ({
+          eq: () => ({
+            maybeSingle: async () => ({
+              data: tabla === "movimientos" ? cabecera : autor,
+              error: null,
+            }),
+            order: async () => ({ data: filasLote, error: null }),
+          }),
+        }),
+      }),
+    } as unknown as Awaited<ReturnType<typeof createClient>>)
+  }
+
+  it("nombra el archivo con el folio MÁS BAJO del lote, no el de la fila consultada", async () => {
+    mockSupabaseLote(CABECERA_LOTE, FILAS_LOTE)
+
+    const res = await GET(new Request("http://x"), ctx())
+
+    expect(res.status).toBe(200)
+    // La fila consultada es la 44, pero el lote tiene la 42: el vale es 000042.
+    expect(res.headers.get("Content-Disposition")).toBe(
+      'attachment; filename="vale-L-000042.pdf"',
+    )
+  })
+
+  it("emite un PDF válido con los productos de todo el lote", async () => {
+    mockSupabaseLote(CABECERA_LOTE, FILAS_LOTE)
+
+    const res = await GET(new Request("http://x"), ctx())
+    const buffer = Buffer.from(await res.arrayBuffer())
+
+    expect(buffer.subarray(0, 5).toString("latin1")).toBe("%PDF-")
   })
 })

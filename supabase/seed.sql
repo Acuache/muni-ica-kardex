@@ -107,24 +107,23 @@ on conflict (nombre) do nothing;
 do $$
 declare
   v_super uuid := (select id from auth.users where email = 'v.acuache15@gmail.com');
+  r       record;
+  v_lote  uuid;
+  v_prod  uuid;
+  v_area  uuid;
 begin
   -- Idempotencia: si ya existe historial, no re-sembrar.
   if exists (select 1 from public.movimientos) then
     return;
   end if;
 
-  -- Inserta los movimientos resolviendo producto por SKU y área por nombre.
-  -- Las entradas van sin área (area_nombre null → area_id null, exigido por el
-  -- check movimientos_entrada_area); las salidas siempre llevan área.
-  insert into public.movimientos (tipo, producto_id, cantidad, area_id, usuario_id, motivo, fecha)
-  select v.tipo,
-         p.id,
-         v.cantidad,
-         a.id,
-         v_super,
-         v.motivo,
-         now() - make_interval(days => v.dias)
-    from (values
+  -- Cada movimiento del seed es su propio lote (Spec 06.1): se recorre por
+  -- antigüedad (más días atrás primero) para que el número de lote siga la
+  -- cronología (L-1 = el más antiguo). Las entradas van sin área (area_nombre
+  -- null → area_id null, exigido por el check movimientos_entrada_area); las
+  -- salidas siempre llevan área.
+  for r in
+    select * from (values
       -- Lapicero azul (net +100)
       ('entrada', 'OF-LAP-AZ', 150, null,               'Compra a proveedor',       30),
       ('salida',  'OF-LAP-AZ',  30, 'Logística',         'Entrega mensual',          20),
@@ -144,8 +143,22 @@ begin
       ('entrada', 'EQ-USB',     30, null,                'Compra a proveedor',       18),
       ('salida',  'EQ-USB',      5, 'Contabilidad',      'Respaldo de información',    3)
     ) as v(tipo, sku, cantidad, area_nombre, motivo, dias)
-    join public.productos p on p.sku = v.sku
-    left join public.areas a on a.nombre = v.area_nombre;
+    order by v.dias desc
+  loop
+    insert into public.lotes default values returning id into v_lote;
+
+    select id into v_prod from public.productos where sku = r.sku;
+    v_area := null;
+    if r.area_nombre is not null then
+      select id into v_area from public.areas where nombre = r.area_nombre;
+    end if;
+
+    insert into public.movimientos
+      (tipo, producto_id, cantidad, area_id, usuario_id, motivo, fecha, lote_id)
+    values
+      (r.tipo, v_prod, r.cantidad, v_area, v_super, r.motivo,
+       now() - make_interval(days => r.dias), v_lote);
+  end loop;
 
   -- Cuadra el stock de los productos afectados al neto de sus movimientos.
   update public.productos p

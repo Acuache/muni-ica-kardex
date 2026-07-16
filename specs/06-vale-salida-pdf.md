@@ -1,6 +1,6 @@
 # SPEC 06 — Vale de salida en PDF
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 05
 > **Fecha:** 2026-07-15
 > **Objetivo:** Generar, desde cualquier movimiento de salida, un vale en PDF descargable con folio correlativo, firmable en papel.
@@ -136,26 +136,26 @@ Cada paso deja la app corriendo (`npm run dev`) y es commit-eable por separado. 
 
 ## 5. Criterios de aceptación
 
-- [ ] Desde una fila de **salida** en `/admin/movimientos`, el botón **Vale** descarga un PDF válido (abre en un lector; el archivo empieza con `%PDF`).
-- [ ] El PDF muestra **folio, fecha, producto, SKU, cantidad, área destino** y **quién entregó**.
-- [ ] El PDF trae el encabezado "Municipalidad Provincial de Ica" / "Vale de salida de almacén" y **dos recuadros de firma** ("Entregado por" / "Recibido por") con línea, nombre y DNI.
-- [ ] El **motivo** se imprime si existe; si es `null`, la línea **se omite** (no imprime "null" ni una etiqueta vacía).
-- [ ] **Entregado por** muestra `profiles.nombre`; si está vacío cae al **email**; si `usuario_id` es `null` (cuenta eliminada) muestra **"—"**.
-- [ ] El archivo descargado se llama **`vale-000042.pdf`** (folio con padding a 6).
-- [ ] Las filas de tipo **entrada** **no** muestran el botón Vale, y `GET /admin/movimientos/<id de una entrada>/vale` devuelve **404**.
-- [ ] `GET` del vale con rol **`usuario`** devuelve **403** y no el PDF. **Sin sesión**, el proxy (Spec 01) redirige a `/login` con **307** antes de que el handler llegue a correr. En ninguno de los dos casos sale el PDF; ambos verificados **sin pasar por la UI** (petición directa a la ruta).
-- [ ] Generar el vale **no** altera `stock_actual` ni ninguna columna del movimiento.
-- [ ] Descargar **dos veces** el mismo vale produce el **mismo folio y el mismo contenido** (idempotente).
-- [ ] Toda fila de `movimientos` tiene un `folio` **único** y **not null**.
-- [ ] Tras la migración, los movimientos del **seed** tienen folio correlativo **en orden de fecha** (el más antiguo es el 1).
-- [ ] Un movimiento **nuevo** registrado desde la app recibe el folio siguiente al máximo, **sin modificar** `registrar_movimiento`.
-- [ ] La app **no puede fijar ni cambiar** el folio: un `insert` que nombre `folio` es rechazado por la base (`generated always`).
-- [ ] Una salida cuyo producto fue **dado de baja** (`eliminado = true`, Spec 05) **sigue** generando su vale con nombre y SKU.
-- [ ] Los **acentos y la ñ** se imprimen correctamente en el PDF.
-- [ ] `formatFolio` y el nombre de archivo tienen **tests unitarios** (padding, folio de 7+ dígitos).
-- [ ] El armado de `DatosVale` tiene **tests** (fallback nombre → email → "—", motivo nulo, fecha en `America/Lima`).
-- [ ] Un test renderiza `ValePDF` con `renderToBuffer` y verifica un buffer **no vacío** que empieza con `%PDF`.
-- [ ] `npm run lint` y `npm test` pasan.
+- [x] Desde una fila de **salida** en `/admin/movimientos`, el botón **Vale** descarga un PDF válido (abre en un lector; el archivo empieza con `%PDF`).
+- [x] El PDF muestra **folio, fecha, producto, SKU, cantidad, área destino** y **quién entregó**.
+- [x] El PDF trae el encabezado "Municipalidad Provincial de Ica" / "Vale de salida de almacén" y **dos recuadros de firma** ("Entregado por" / "Recibido por") con línea, nombre y DNI.
+- [x] El **motivo** se imprime si existe; si es `null`, la línea **se omite** (no imprime "null" ni una etiqueta vacía).
+- [x] **Entregado por** muestra `profiles.nombre`; si está vacío cae al **email**; si `usuario_id` es `null` (cuenta eliminada) muestra **"—"**.
+- [x] El archivo descargado se llama **`vale-000042.pdf`** (folio con padding a 6).
+- [x] Las filas de tipo **entrada** **no** muestran el botón Vale, y `GET /admin/movimientos/<id de una entrada>/vale` devuelve **404**.
+- [x] `GET` del vale con rol **`usuario`** devuelve **403** y no el PDF. **Sin sesión**, el proxy (Spec 01) redirige a `/login` con **307** antes de que el handler llegue a correr. En ninguno de los dos casos sale el PDF; ambos verificados **sin pasar por la UI** (petición directa a la ruta).
+- [x] Generar el vale **no** altera `stock_actual` ni ninguna columna del movimiento.
+- [x] Descargar **dos veces** el mismo vale produce el **mismo folio y el mismo contenido** (idempotente).
+- [x] Toda fila de `movimientos` tiene un `folio` **único** y **not null**.
+- [x] Tras la migración, los movimientos del **seed** tienen folio correlativo **en orden de fecha** (el más antiguo es el 1).
+- [x] Un movimiento **nuevo** registrado desde la app recibe el folio siguiente al máximo, **sin modificar** `registrar_movimiento`.
+- [x] La app **no puede fijar ni cambiar** el folio: un `insert` que nombre `folio` es rechazado por la base (`generated always`).
+- [x] Una salida cuyo producto fue **dado de baja** (`eliminado = true`, Spec 05) **sigue** generando su vale con nombre y SKU.
+- [x] Los **acentos y la ñ** se imprimen correctamente en el PDF.
+- [x] `formatFolio` y el nombre de archivo tienen **tests unitarios** (padding, folio de 7+ dígitos).
+- [x] El armado de `DatosVale` tiene **tests** (fallback nombre → email → "—", motivo nulo, fecha en `America/Lima`).
+- [x] Un test renderiza `ValePDF` con `renderToBuffer` y verifica un buffer **no vacío** que empieza con `%PDF`.
+- [x] `npm run lint` y `npm test` pasan.
 
 ---
 

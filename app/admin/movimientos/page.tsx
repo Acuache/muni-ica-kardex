@@ -13,11 +13,13 @@ type ProductoRow = {
   sku: string
   stock_actual: number
   eliminado: boolean
+  categoria_id: string
 }
 
 type MovimientoRow = {
   id: string
   folio: number
+  lote_id: string
   tipo: "entrada" | "salida"
   producto_id: string
   cantidad: number
@@ -47,29 +49,43 @@ export default async function MovimientosPage({
   let movQuery = supabase
     .from("movimientos")
     .select(
-      "id, folio, tipo, producto_id, cantidad, area_id, usuario_id, motivo, fecha",
+      "id, folio, lote_id, tipo, producto_id, cantidad, area_id, usuario_id, motivo, fecha",
     )
     .order("fecha", { ascending: false })
   if (productoParam) movQuery = movQuery.eq("producto_id", productoParam)
 
-  const [{ data: movsRaw }, { data: productosRaw }, { data: areasRaw }] =
-    await Promise.all([
-      movQuery,
-      // TODOS los productos (incl. eliminados) para resolver nombres en el
-      // historial; los vigentes se derivan luego para el `select` del formulario.
-      supabase
-        .from("productos")
-        .select("id, nombre, sku, stock_actual, eliminado")
-        .order("nombre"),
-      supabase.from("areas").select("id, nombre").order("nombre"),
-    ])
+  const [
+    { data: movsRaw },
+    { data: productosRaw },
+    { data: areasRaw },
+    { data: categoriasRaw },
+    { data: lotesRaw },
+  ] = await Promise.all([
+    movQuery,
+    // TODOS los productos (incl. eliminados) para resolver nombres en el
+    // historial; los vigentes se derivan luego para el `select` del formulario.
+    supabase
+      .from("productos")
+      .select("id, nombre, sku, stock_actual, eliminado, categoria_id")
+      .order("nombre"),
+    supabase.from("areas").select("id, nombre").order("nombre"),
+    // Nombres de categoría para agrupar los productos en el formulario (Spec 06.1).
+    // Se resuelven con Map, no con embed — el patrón del resto de la página.
+    supabase.from("categorias").select("id, nombre"),
+    // Correlativo de cada lote (Spec 06.1); se resuelve con Map, no con embed.
+    supabase.from("lotes").select("id, numero"),
+  ])
 
   const productos = (productosRaw ?? []) as ProductoRow[]
   const areas = (areasRaw ?? []) as AreaOpcion[]
   const movRows = (movsRaw ?? []) as MovimientoRow[]
+  const categorias = (categoriasRaw ?? []) as { id: string; nombre: string }[]
+  const lotes = (lotesRaw ?? []) as { id: string; numero: number }[]
 
   const prodPorId = new Map(productos.map((p) => [p.id, p]))
   const areaPorId = new Map(areas.map((a) => [a.id, a.nombre]))
+  const catPorId = new Map(categorias.map((c) => [c.id, c.nombre]))
+  const loteNumPorId = new Map(lotes.map((l) => [l.id, l.numero]))
 
   // Emails de quienes registraron (join manual usuario_id → profiles.id; la RLS
   // deja al admin leer todas las filas de profiles).
@@ -92,6 +108,8 @@ export default async function MovimientosPage({
     return {
       id: m.id,
       folio: m.folio,
+      lote_id: m.lote_id,
+      lote_numero: loteNumPorId.get(m.lote_id) ?? 0,
       tipo: m.tipo,
       producto_id: m.producto_id,
       producto_nombre: prod?.nombre ?? null,
@@ -109,11 +127,14 @@ export default async function MovimientosPage({
   // Solo productos vigentes se pueden mover: alimentan el `select` del formulario.
   const productosVigentes: ProductoOpcion[] = productos
     .filter((p) => !p.eliminado)
-    .map(({ id, nombre, sku, stock_actual }) => ({
-      id,
-      nombre,
-      sku,
-      stock_actual,
+    .map((p) => ({
+      id: p.id,
+      nombre: p.nombre,
+      sku: p.sku,
+      stock_actual: p.stock_actual,
+      categoria_id: p.categoria_id,
+      // Sin categoría resuelta no debería ocurrir (categoría obligatoria).
+      categoria_nombre: catPorId.get(p.categoria_id) ?? "Sin categoría",
     }))
 
   // Si la vista viene pre-filtrada por producto, su nombre para el encabezado.

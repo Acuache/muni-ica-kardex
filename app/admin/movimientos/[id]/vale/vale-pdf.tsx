@@ -1,5 +1,5 @@
 /**
- * Vale de salida de almacén en PDF (Spec 06).
+ * Vale de salida de almacén en PDF (Spec 06 / 06.1).
  *
  * NO lleva `"use client"`: no es React DOM. `@react-pdf/renderer` tiene su
  * propio reconciler y estos `View`/`Text` no son elementos del navegador — el
@@ -8,8 +8,10 @@
  * Fuente Helvetica (la estándar del formato PDF, sin registrar nada): cubre
  * Latin-1, así que los acentos y la ñ se imprimen bien.
  *
- * Solo pinta lo que recibe: los fallbacks y el formato de fecha ya vienen
- * resueltos por `construirDatosVale` (`lib/movimientos/vale.ts`).
+ * Solo pinta lo que recibe: los fallbacks, el formato de fecha y la agrupación
+ * por categoría ya vienen resueltos por `construirDatosVale`
+ * (`lib/movimientos/vale.ts`). Un vale de un solo producto es un vale con un
+ * grupo de un item: mismo componente, sin rama especial.
  */
 import {
   Document,
@@ -60,7 +62,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
-    marginBottom: 24,
+    marginBottom: 20,
   },
   folio: {
     fontFamily: "Helvetica-Bold",
@@ -71,19 +73,19 @@ const styles = StyleSheet.create({
     color: TENUE,
   },
 
-  // Bloque de datos
+  // Bloque de datos del documento (área, motivo): son del lote entero.
   datos: {
     borderWidth: 1,
     borderColor: LINEA,
     borderStyle: "solid",
     borderRadius: 4,
     padding: 16,
+    marginBottom: 20,
   },
   fila: {
     flexDirection: "row",
     marginBottom: 10,
   },
-  // Última fila del bloque: sin margen para no descuadrar el recuadro.
   filaUltima: {
     flexDirection: "row",
   },
@@ -92,26 +94,76 @@ const styles = StyleSheet.create({
     color: TENUE,
     fontSize: 10,
   },
-  // Columna con el valor de la fila. El `flex: 1` va SIEMPRE aquí y NUNCA en un
-  // `Text`: dentro de una columna, `flex: 1` implica `flex-basis: 0`, que anula
-  // la altura del texto y lo superpone al de la línea siguiente.
+  // El `flex: 1` va SIEMPRE en la columna y NUNCA en un `Text`: dentro de una
+  // columna, `flex: 1` implica `flex-basis: 0`, que anula la altura del texto.
   valorCol: {
     flex: 1,
   },
   valor: {
     fontFamily: "Helvetica-Bold",
   },
-  sku: {
+
+  // Detalle de productos, agrupado en secciones por categoría (Spec 06.1)
+  cabecera: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: TINTA,
+    borderBottomStyle: "solid",
+    paddingBottom: 4,
+    marginBottom: 6,
+  },
+  thFolio: { width: 64, fontSize: 9, color: TENUE, letterSpacing: 0.3 },
+  thProducto: { flex: 1, fontSize: 9, color: TENUE, letterSpacing: 0.3 },
+  thCantidad: {
+    width: 52,
+    textAlign: "right",
     fontSize: 9,
     color: TENUE,
-    marginTop: 2,
+    letterSpacing: 0.3,
+  },
+  seccion: {
+    marginBottom: 12,
+  },
+  categoria: {
+    fontFamily: "Helvetica-Bold",
+    fontSize: 11,
+    marginBottom: 5,
+    color: TINTA,
+  },
+  itemFila: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingVertical: 3,
+  },
+  itemFolio: {
+    width: 64,
+    fontSize: 9,
+    color: TENUE,
+  },
+  itemProdCol: {
+    flex: 1,
+  },
+  itemProducto: {
+    fontFamily: "Helvetica-Bold",
+    fontSize: 10,
+  },
+  itemSku: {
+    fontSize: 8,
+    color: TENUE,
+    marginTop: 1,
+  },
+  itemCantidad: {
+    width: 52,
+    textAlign: "right",
+    fontFamily: "Helvetica-Bold",
+    fontSize: 10,
   },
 
   // Firmas
   firmas: {
     flexDirection: "row",
     gap: 24,
-    marginTop: 56,
+    marginTop: 40,
   },
   recuadro: {
     flex: 1,
@@ -120,7 +172,6 @@ const styles = StyleSheet.create({
     borderStyle: "solid",
     borderRadius: 4,
     padding: 12,
-    // Espacio real para firmar sobre el papel.
     height: 118,
   },
   rotulo: {
@@ -179,7 +230,7 @@ function RecuadroFirma({
 export function ValePDF({ datos }: { datos: DatosVale }) {
   return (
     <Document
-      title={datos.folioTexto}
+      title={`Vale ${datos.loteTexto}`}
       author="Municipalidad Provincial de Ica"
       subject="Vale de salida de almacén"
     >
@@ -190,27 +241,12 @@ export function ValePDF({ datos }: { datos: DatosVale }) {
         </View>
 
         <View style={styles.meta}>
-          <Text style={styles.folio}>{datos.folioTexto}</Text>
+          <Text style={styles.folio}>Lote {datos.loteTexto}</Text>
           <Text style={styles.fecha}>Fecha: {datos.fecha}</Text>
         </View>
 
+        {/* Datos del documento (del lote entero): área destino y motivo. */}
         <View style={styles.datos}>
-          <View style={styles.fila}>
-            <Text style={styles.etiqueta}>Producto</Text>
-            <View style={styles.valorCol}>
-              <Text style={styles.valor}>{datos.producto}</Text>
-              <Text style={styles.sku}>SKU: {datos.sku}</Text>
-            </View>
-          </View>
-
-          <View style={styles.fila}>
-            <Text style={styles.etiqueta}>Cantidad</Text>
-            <View style={styles.valorCol}>
-              <Text style={styles.valor}>{datos.cantidad}</Text>
-            </View>
-          </View>
-
-          {/* El motivo es opcional: si no existe, la línea no se imprime. */}
           <View style={datos.motivo ? styles.fila : styles.filaUltima}>
             <Text style={styles.etiqueta}>Área destino</Text>
             <View style={styles.valorCol}>
@@ -218,6 +254,7 @@ export function ValePDF({ datos }: { datos: DatosVale }) {
             </View>
           </View>
 
+          {/* El motivo es opcional: si no existe, la línea no se imprime. */}
           {datos.motivo && (
             <View style={styles.filaUltima}>
               <Text style={styles.etiqueta}>Motivo</Text>
@@ -228,14 +265,38 @@ export function ValePDF({ datos }: { datos: DatosVale }) {
           )}
         </View>
 
+        {/* Detalle de productos: una sección por categoría (Spec 06.1). */}
+        <View style={styles.cabecera}>
+          <Text style={styles.thFolio}>FOLIO</Text>
+          <Text style={styles.thProducto}>PRODUCTO</Text>
+          <Text style={styles.thCantidad}>CANT.</Text>
+        </View>
+
+        {datos.grupos.map((grupo) => (
+          // wrap={false}: una categoría no se parte a mitad entre páginas.
+          <View key={grupo.categoria} style={styles.seccion} wrap={false}>
+            <Text style={styles.categoria}>{grupo.categoria}</Text>
+            {grupo.items.map((item) => (
+              <View key={item.folioTexto} style={styles.itemFila}>
+                <Text style={styles.itemFolio}>{item.folioTexto}</Text>
+                <View style={styles.itemProdCol}>
+                  <Text style={styles.itemProducto}>{item.producto}</Text>
+                  <Text style={styles.itemSku}>SKU: {item.sku}</Text>
+                </View>
+                <Text style={styles.itemCantidad}>{item.cantidad}</Text>
+              </View>
+            ))}
+          </View>
+        ))}
+
         <View style={styles.firmas}>
           <RecuadroFirma rotulo="Entregado por" nombre={datos.entregadoPor} />
           <RecuadroFirma rotulo="Recibido por" />
         </View>
 
         <Text style={styles.pie}>
-          {datos.folioTexto} · Documento generado por el sistema de almacén de
-          la Municipalidad Provincial de Ica.
+          Lote {datos.loteTexto} · Documento generado por el sistema de almacén
+          de la Municipalidad Provincial de Ica.
         </Text>
       </Page>
     </Document>
