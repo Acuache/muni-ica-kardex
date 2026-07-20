@@ -51,6 +51,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
+import { agruparEnLotes } from "@/lib/movimientos/agrupar"
 import { TIPO_LABELS, TIPOS } from "@/lib/movimientos/constants"
 import { crearLoteFormSchema } from "@/lib/movimientos/schemas"
 import type {
@@ -61,18 +62,6 @@ import type {
 import { formatLote, padFolio } from "@/lib/movimientos/vale"
 
 import { registrarLote } from "./actions"
-
-/** Un lote agrupado para la vista general (Spec 06.1). */
-type LoteVista = {
-  id: string
-  numero: number
-  tipo: "entrada" | "salida"
-  area_id: string | null
-  area_nombre: string | null
-  fecha: string
-  usuario_email: string | null
-  movimientos: Movimiento[]
-}
 
 /** Una línea del lote en el formulario. */
 type LineaForm = { producto_id: string; cantidad: number }
@@ -280,25 +269,7 @@ export function MovimientosClient({
   // ---- Datos derivados para las tablas ----
 
   // Vista general: agrupa los movimientos en lotes.
-  const lotes = useMemo(() => {
-    const byLote = new Map<string, LoteVista>()
-    for (const m of movimientos) {
-      const l = byLote.get(m.lote_id)
-      if (l) l.movimientos.push(m)
-      else
-        byLote.set(m.lote_id, {
-          id: m.lote_id,
-          numero: m.lote_numero,
-          tipo: m.tipo,
-          area_id: m.area_id,
-          area_nombre: m.area_nombre,
-          fecha: m.fecha,
-          usuario_email: m.usuario_email,
-          movimientos: [m],
-        })
-    }
-    return [...byLote.values()]
-  }, [movimientos])
+  const lotes = useMemo(() => agruparEnLotes(movimientos), [movimientos])
 
   const lotesVisibles = useMemo(() => {
     const term = q.trim().toLowerCase()

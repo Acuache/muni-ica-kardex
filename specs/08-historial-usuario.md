@@ -1,6 +1,6 @@
 # SPEC 08 — Vista de usuario: mi historial
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 02, SPEC 05, SPEC 06.1
 > **Fecha:** 2026-07-20
 > **Objetivo:** Dar al rol `usuario` una vista de solo lectura con las salidas entregadas a su área, agrupadas por lote, garantizada por RLS.
@@ -133,19 +133,19 @@ Cada paso deja la app corriendo (`npm run dev`) y es commit-eable por separado. 
 
 ## 5. Criterios de aceptación
 
-- [ ] Un `usuario` con área asignada ve, en `/usuario/dashboard`, las salidas entregadas a **su** área, agrupadas por lote (`L-000001`), con filas expandibles.
-- [ ] Al expandir un lote, la lista muestra por producto **folio, producto + SKU, cantidad** y **motivo** (si existe); la fila del lote muestra su **fecha**.
-- [ ] Un `usuario` **no** ve entradas ni salidas de otras áreas — verificado con una **petición directa a la API** (RLS), no solo en la UI.
-- [ ] Un `usuario` **sin** `area_id` ve un mensaje de "sin área asignada" y ninguna fila.
-- [ ] Un `usuario` **no** puede crear, editar ni anular ningún movimiento (no hay UI ni política RLS que lo permita).
-- [ ] Un `admin` / `superadmin` sigue viendo **todos** los movimientos en `/admin/movimientos` (las políticas nuevas no le restan lectura).
-- [ ] El correlativo de lote se muestra como `L-000001` (reusa `formatLote`) y el folio con `padFolio`.
-- [ ] El buscador filtra por producto, SKU o código de lote; el orden por fecha descendente es el defecto.
-- [ ] El usuario **no** dispone del botón ni de la descarga del vale PDF (queda de admin; el guard del Route Handler no cambia).
-- [ ] `mi_area_id()` devuelve el `area_id` del perfil del `auth.uid()`, o `null` si no tiene; es `security definer` con `search_path = ''`.
-- [ ] La agrupación por lote vive en `lib/movimientos/` con tests, y la vista admin la reusa **sin** cambio de comportamiento.
-- [ ] `agruparEnLotes` y el filtro del buscador tienen tests unitarios; el render del `HistorialClient` (fila expandible + estado vacío) tiene test.
-- [ ] `npm run lint` y `npm test` pasan.
+- [x] Un `usuario` con área asignada ve, en `/usuario/dashboard`, las salidas entregadas a **su** área, agrupadas por lote (`L-000001`), con filas expandibles.
+- [x] Al expandir un lote, la lista muestra por producto **folio, producto + SKU, cantidad** y **motivo** (si existe); la fila del lote muestra su **fecha**.
+- [x] Un `usuario` **no** ve entradas ni salidas de otras áreas — verificado con una **petición directa a la API** (RLS), no solo en la UI.
+- [x] Un `usuario` **sin** `area_id` ve un mensaje de "sin área asignada" y ninguna fila.
+- [x] Un `usuario` **no** puede crear, editar ni anular ningún movimiento (no hay UI ni política RLS que lo permita).
+- [x] Un `admin` / `superadmin` sigue viendo **todos** los movimientos en `/admin/movimientos` (las políticas nuevas no le restan lectura).
+- [x] El correlativo de lote se muestra como `L-000001` (reusa `formatLote`) y el folio con `padFolio`.
+- [x] El buscador filtra por producto, SKU o código de lote; el orden por fecha descendente es el defecto.
+- [x] El usuario **no** dispone del botón ni de la descarga del vale PDF (queda de admin; el guard del Route Handler no cambia).
+- [x] `mi_area_id()` devuelve el `area_id` del perfil del `auth.uid()`, o `null` si no tiene; es `security definer` con `search_path = ''`.
+- [x] La agrupación por lote vive en `lib/movimientos/` con tests, y la vista admin la reusa **sin** cambio de comportamiento.
+- [x] `agruparEnLotes` y el filtro del buscador tienen tests unitarios; el render del `HistorialClient` (fila expandible + estado vacío) tiene test.
+- [x] `npm run lint` y `npm test` pasan.
 
 ---
 

@@ -115,3 +115,23 @@ export type LoteResumen = {
   /** Cuántos productos (filas) tiene el lote. */
   n_productos: number
 }
+
+/**
+ * Un lote agrupado con sus movimientos completos, para la tabla expandible
+ * de la vista general (Spec 06.1) — la usan admin (`movimientos-client.tsx`)
+ * y usuario (Spec 08, `historial-client.tsx`). A diferencia de `LoteResumen`
+ * (que resume en `n_productos`), esta trae el arreglo de `movimientos` para
+ * poder pintar la subtabla al expandir la fila.
+ */
+export type LoteVista = {
+  id: string
+  numero: number
+  tipo: TipoMovimiento
+  area_id: string | null
+  area_nombre: string | null
+  /** Fecha del lote: la de sus movimientos (todos la comparten). */
+  fecha: string
+  /** Email de quien registró; "—" si la cuenta fue eliminada. */
+  usuario_email: string | null
+  movimientos: Movimiento[]
+}
