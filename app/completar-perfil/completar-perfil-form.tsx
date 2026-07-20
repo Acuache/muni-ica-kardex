@@ -5,6 +5,7 @@ import { useActionState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Spinner } from "@/components/ui/spinner"
 
 import { completarPerfil, type OnboardingState } from "./actions"
 
@@ -51,6 +52,7 @@ export function CompletarPerfilForm({ defaultNombre, defaultTelefono }: Props) {
         </p>
       )}
       <Button type="submit" disabled={pending}>
+        {pending && <Spinner />}
         {pending ? "Guardando…" : "Guardar y continuar"}
       </Button>
     </form>

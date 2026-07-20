@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Table,
   TableBody,
@@ -220,6 +221,7 @@ export function CategoriasClient({ categorias }: { categorias: Categoria[] }) {
                 Cancelar
               </DialogClose>
               <Button type="submit" disabled={pending}>
+                {pending && <Spinner />}
                 {pending ? "Guardando…" : "Guardar"}
               </Button>
             </DialogFooter>
@@ -249,6 +251,7 @@ export function CategoriasClient({ categorias }: { categorias: Categoria[] }) {
               disabled={pending}
               onClick={confirmDelete}
             >
+              {pending && <Spinner />}
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>

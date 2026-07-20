@@ -42,6 +42,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Table,
   TableBody,
@@ -921,6 +922,7 @@ export function MovimientosClient({
                 type="submit"
                 disabled={pending || fields.length === 0 || hayExceso}
               >
+                {pending && <Spinner />}
                 {pending ? "Registrando…" : "Registrar"}
               </Button>
             </DialogFooter>

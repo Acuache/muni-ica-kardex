@@ -44,6 +44,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Table,
   TableBody,
@@ -672,6 +673,7 @@ export function ProductosClient({
                 Cancelar
               </DialogClose>
               <Button type="submit" disabled={pending}>
+                {pending && <Spinner />}
                 {pending ? "Guardando…" : "Guardar"}
               </Button>
             </DialogFooter>
@@ -701,6 +703,7 @@ export function ProductosClient({
               disabled={pending}
               onClick={confirmDelete}
             >
+              {pending && <Spinner />}
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>

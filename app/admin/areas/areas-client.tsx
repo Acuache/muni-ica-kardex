@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Table,
   TableBody,
@@ -204,6 +205,7 @@ export function AreasClient({ areas }: { areas: Area[] }) {
                 Cancelar
               </DialogClose>
               <Button type="submit" disabled={pending}>
+                {pending && <Spinner />}
                 {pending ? "Guardando…" : "Guardar"}
               </Button>
             </DialogFooter>
@@ -233,6 +235,7 @@ export function AreasClient({ areas }: { areas: Area[] }) {
               disabled={pending}
               onClick={confirmDelete}
             >
+              {pending && <Spinner />}
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>

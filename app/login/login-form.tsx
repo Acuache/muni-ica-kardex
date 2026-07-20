@@ -5,6 +5,7 @@ import { useActionState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Spinner } from "@/components/ui/spinner"
 
 import { login, type LoginState } from "./actions"
 
@@ -41,6 +42,7 @@ export function LoginForm() {
         </p>
       )}
       <Button type="submit" disabled={pending}>
+        {pending && <Spinner />}
         {pending ? "Ingresando…" : "Ingresar"}
       </Button>
     </form>
