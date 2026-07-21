@@ -21,9 +21,11 @@ context-system/
 ├── all-subagents/
 │   ├── descripcion.md   ← qué encontrarás + plantilla (portable)
 │   └── subagents.md     ← subagentes de este proyecto
-└── bugs/
-    ├── descripcion.md   ← qué encontrarás + criterio + plantilla (portable)
-    └── registro.md      ← bugs reales de este proyecto
+├── bugs/
+│   ├── descripcion.md   ← qué encontrarás + criterio + plantilla (portable)
+│   └── registro.md      ← bugs reales de este proyecto
+└── auditorias/
+    └── 01-informe.md    ← auditoría integral (Spec 10): hallazgos + roadmap
 ```
 
 Principio: **las `descripcion.md` son estables; los archivos de lista son lo que cambia.** En el día a día, el único que se actualiza con frecuencia es `bugs/registro.md`.
@@ -32,6 +34,12 @@ Principio: **las `descripcion.md` son estables; los archivos de lista son lo que
 
 - **Claude** lo consulta como contexto: antes de tocar una parte del stack revisa el skill/MCP relevante, y **documenta cada bug no trivial** en `bugs/registro.md`. Por eso el `CLAUDE.md` del proyecto enlaza a este sistema y recoge la regla de documentar bugs (así Claude "recuerda" hacerlo).
 - **El equipo** lo lee como documentación viva del proyecto.
+
+## Auditorías
+
+Revisiones integrales del proyecto (correctitud, seguridad, escalabilidad, calidad de código), de alcance amplio y análogas a `bugs/registro.md`. Viven en `auditorias/`:
+
+- [Informe de auditoría integral — Spec 10](auditorias/01-informe.md) — 33 hallazgos priorizados por severidad (0 críticos · 2 altos · 7 medios · 24 bajos) sobre las Specs 01–09, más un roadmap de specs correctivos y de nuevas funcionalidades. Solo lectura: no modificó código ni BD.
 
 ## Cómo recrearlo en un proyecto nuevo (plano)
 
